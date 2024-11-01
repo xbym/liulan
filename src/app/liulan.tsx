@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,15 +8,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { X } from 'lucide-react'
 import WalletImportModal from './wallet-import-modal'
 
-interface 止盈止损组 {
+interface StopGroup {
   pricePercent: number;
   amountPercent: number;
 }
 
-interface 自定义盈亏配置 {
+interface CustomPnlConfig {
   priorityFee: string;
   jitoEnabled: boolean;
   jitoTip: number;
@@ -38,33 +37,33 @@ interface WalletResponse {
   docs: string;
 }
 
-export default function 代币浏览器与快速交易页面() {
+export default function TokenBrowserAndQuickTrade() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [apiKey, setApiKey] = useState<string>('')
   const [wallets, setWallets] = useState<Wallet[]>([])
 
-  const [交易对, 设置交易对] = useState<string>('')
-  const [钱包ID, 设置钱包ID] = useState<string>('')
-  const [优先费, 设置优先费] = useState<string>('')
-  const [启用防夹, 设置启用防夹] = useState<boolean>(true)
-  const [防夹费, 设置防夹费] = useState<number>(0.001)
-  const [最大滑点, 设置最大滑点] = useState<number>(0.1)
-  const [并发节点, 设置并发节点] = useState<number>(2)
-  const [重试次数, 设置重试次数] = useState<number>(1)
-  const [数量或百分比, 设置数量或百分比] = useState<number>(0.1)
-  const [止盈百分比, 设置止盈百分比] = useState<number>(0.5)
-  const [止损百分比, 设置止损百分比] = useState<number>(0.5)
-  const [止盈组, 设置止盈组] = useState<止盈止损组[]>([
+  const [tradingPair, setTradingPair] = useState<string>('')
+  const [walletId, setWalletId] = useState<string>('')
+  const [priorityFee, setPriorityFee] = useState<string>('')
+  const [jitoEnabled, setJitoEnabled] = useState<boolean>(true)
+  const [jitoTip, setJitoTip] = useState<number>(0.001)
+  const [maxSlippage, setMaxSlippage] = useState<number>(0.1)
+  const [concurrentNodes, setConcurrentNodes] = useState<number>(2)
+  const [retries, setRetries] = useState<number>(1)
+  const [amountOrPercent, setAmountOrPercent] = useState<number>(0.1)
+  const [stopEarnPercent, setStopEarnPercent] = useState<number>(0.5)
+  const [stopLossPercent, setStopLossPercent] = useState<number>(0.5)
+  const [stopEarnGroup, setStopEarnGroup] = useState<StopGroup[]>([
     { pricePercent: 0.2, amountPercent: 0.5 },
     { pricePercent: 0.8, amountPercent: 1 }
   ])
-  const [止损组, 设置止损组] = useState<止盈止损组[]>([
+  const [stopLossGroup, setStopLossGroup] = useState<StopGroup[]>([
     { pricePercent: 0.2, amountPercent: 0.5 },
     { pricePercent: 0.8, amountPercent: 1 }
   ])
-  const [启用自定义盈亏配置, 设置启用自定义盈亏配置] = useState<boolean>(true)
-  const [自定义盈亏配置, 设置自定义盈亏配置] = useState<自定义盈亏配置>({
+  const [pnlCustomConfigEnabled, setPnlCustomConfigEnabled] = useState<boolean>(true)
+  const [pnlCustomConfig, setPnlCustomConfig] = useState<CustomPnlConfig>({
     priorityFee: '',
     jitoEnabled: true,
     jitoTip: 0.001,
@@ -75,13 +74,7 @@ export default function 代币浏览器与快速交易页面() {
 
   const baseUrl = 'https://www.gmgn.cc/kline/sol/'
 
-  useEffect(() => {
-    if (apiKey) {
-      fetchWallets();
-    }
-  }, [apiKey]);
-
-  const fetchWallets = async () => {
+  const fetchWallets = useCallback(async () => {
     if (!apiKey) return;
     
     try {
@@ -106,7 +99,13 @@ export default function 代币浏览器与快速交易页面() {
       console.error('获取钱包列表时出错:', error);
       alert('获取钱包列表失败，请重试。');
     }
-  };
+  }, [apiKey]);
+
+  useEffect(() => {
+    if (apiKey) {
+      fetchWallets();
+    }
+  }, [apiKey, fetchWallets]);
 
   const handleImport = async (importApiKey: string, privateKeys: string, onlyImportApiKey: boolean) => {
     setIsImporting(true);
@@ -131,64 +130,65 @@ export default function 代币浏览器与快速交易页面() {
           throw new Error('导入失败');
         }
 
-        const data = await response.json();
+        await response.json();
         setApiKey(importApiKey);
         alert(`成功导入钱包`);
       }
       setIsModalOpen(false);
       await fetchWallets();
     } catch (error) {
+      console.error('导入钱包时出错:', error);
       alert(error instanceof Error ? error.message : "导入钱包时发生未知错误");
     } finally {
       setIsImporting(false);
     }
   };
 
-  const 处理快速交易提交 = async (类型: '买入' | '卖出') => {
-    if (!交易对 || !钱包ID || !apiKey) {
+  const handleQuickTradeSubmit = async (type: 'buy' | 'sell') => {
+    if (!tradingPair || !walletId || !apiKey) {
       alert('请填写所有必要字段并确保已导入钱包');
       return;
     }
 
-    const 请求数据 = {
+    const requestData = {
       chain: 'solana',
-      pair: 交易对,
-      walletId: 钱包ID,
-      type: 类型 === '买入' ? 'buy' : 'sell',
-      priorityFee: 优先费,
-      jitoEnabled: 启用防夹,
-      jitoTip: 防夹费,
-      maxSlippage: 最大滑点,
-      concurrentNodes: 并发节点,
-      retries: 重试次数,
-      amountOrPercent: 数量或百分比,
-      stopEarnPercent: 止盈百分比,
-      stopLossPercent: 止损百分比,
-      stopEarnGroup: 止盈组,
-      stopLossGroup: 止损组,
-      pnlCustomConfigEnabled: 启用自定义盈亏配置,
-      pnlCustomConfig: 自定义盈亏配置
+      pair: tradingPair,
+      walletId: walletId,
+      type: type,
+      priorityFee: priorityFee,
+      jitoEnabled: jitoEnabled,
+      jitoTip: jitoTip,
+      maxSlippage: maxSlippage,
+      concurrentNodes: concurrentNodes,
+      retries: retries,
+      amountOrPercent: amountOrPercent,
+      stopEarnPercent: stopEarnPercent,
+      stopLossPercent: stopLossPercent,
+      stopEarnGroup: stopEarnGroup,
+      stopLossGroup: stopLossGroup,
+      pnlCustomConfigEnabled: pnlCustomConfigEnabled,
+      pnlCustomConfig: pnlCustomConfig
     }
 
     try {
-      const 响应 = await fetch('https://api-bot-v1.dbotx.com/automation/swap_order', {
+      const response = await fetch('https://api-bot-v1.dbotx.com/automation/swap_order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-API-KEY': apiKey
         },
-        body: JSON.stringify(请求数据)
+        body: JSON.stringify(requestData)
       })
 
-      if (!响应.ok) {
+      if (!response.ok) {
         throw new Error('创建交易订单失败')
       }
 
-      const 数据 = await 响应.json()
-      console.log('交易订单已创建:', 数据)
+      const data = await response.json()
+      console.log('交易订单已创建:', data)
       alert('交易订单创建成功！')
-    } catch (错误) {
-      console.error('创建交易订单时出错:', 错误)
+    } catch (error) {
+      console.error('创建交易订单时出错:', error)
       alert('创建交易订单失败。请重试。')
     }
   }
@@ -232,10 +232,10 @@ export default function 代币浏览器与快速交易页面() {
                 <div className="space-y-4">
                   <div className="flex gap-4">
                     <Input
-                      value={交易对}
+                      value={tradingPair}
                       onChange={(e) => {
                         const value = e.target.value;
-                        设置交易对(value);
+                        setTradingPair(value);
                         if (value) {
                           setChartUrl(`${baseUrl}${value}`);
                         } else {
@@ -276,17 +276,17 @@ export default function 代币浏览器与快速交易页面() {
                               <div
                                 key={wallet.id}
                                 className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                  钱包ID === wallet.id
+                                  walletId === wallet.id
                                     ? 'bg-primary text-primary-foreground font-bold'
                                     : 'bg-background hover:bg-accent hover:text-accent-foreground'
                                 }`}
                                 onClick={() => {
                                   console.log('Wallet clicked:', wallet.id);
-                                  设置钱包ID(wallet.id);
+                                  setWalletId(wallet.id);
                                 }}
                               >
                                 <div className="font-medium">{wallet.address}</div>
-                                {钱包ID === wallet.id && (
+                                {walletId === wallet.id && (
                                   <div className="mt-2 text-sm">✓ 已选择</div>
                                 )}
                               </div>
@@ -305,8 +305,8 @@ export default function 代币浏览器与快速交易页面() {
                           <Input
                             id="amountOrPercent"
                             type="number"
-                            value={数量或百分比}
-                            onChange={(e) => 设置数量或百分比(Number(e.target.value))}
+                            value={amountOrPercent}
+                            onChange={(e) => setAmountOrPercent(Number(e.target.value))}
                             step="0.01"
                           />
                         </div>
@@ -314,8 +314,8 @@ export default function 代币浏览器与快速交易页面() {
                           <Label htmlFor="priorityFee">优先费 (SOL)</Label>
                           <Input
                             id="priorityFee"
-                            value={优先费}
-                            onChange={(e) => 设置优先费(e.target.value)}
+                            value={priorityFee}
+                            onChange={(e) => setPriorityFee(e.target.value)}
                             placeholder="留空表示自动"
                           />
                         </div>
@@ -331,8 +331,8 @@ export default function 代币浏览器与快速交易页面() {
                           <Label htmlFor="jitoEnabled">启用防夹</Label>
                           <Switch
                             id="jitoEnabled"
-                            checked={启用防夹}
-                            onCheckedChange={设置启用防夹}
+                            checked={jitoEnabled}
+                            onCheckedChange={setJitoEnabled}
                           />
                         </div>
                         <div className="space-y-2">
@@ -340,8 +340,8 @@ export default function 代币浏览器与快速交易页面() {
                           <Input
                             id="jitoTip"
                             type="number"
-                            value={防夹费}
-                            onChange={(e) => 设置防夹费(Number(e.target.value))}
+                            value={jitoTip}
+                            onChange={(e) => setJitoTip(Number(e.target.value))}
                             step="0.001"
                           />
                         </div>
@@ -358,8 +358,9 @@ export default function 代币浏览器与快速交易页面() {
                           <Input
                             id="maxSlippage"
                             type="number"
-                            value={最大滑点}
-                            onChange={(e) => 设置最大滑点(Number(e.target.value))}
+                            
+                            value={maxSlippage}
+                            onChange={(e) => setMaxSlippage(Number(e.target.value))}
                             step="0.01"
                           />
                         </div>
@@ -368,8 +369,8 @@ export default function 代币浏览器与快速交易页面() {
                           <Input
                             id="concurrentNodes"
                             type="number"
-                            value={并发节点}
-                            onChange={(e) => 设置并发节点(Number(e.target.value))}
+                            value={concurrentNodes}
+                            onChange={(e) => setConcurrentNodes(Number(e.target.value))}
                             min="1"
                             max="3"
                           />
@@ -379,8 +380,8 @@ export default function 代币浏览器与快速交易页面() {
                           <Input
                             id="retries"
                             type="number"
-                            value={重试次数}
-                            onChange={(e) => 设置重试次数(Number(e.target.value))}
+                            value={retries}
+                            onChange={(e) => setRetries(Number(e.target.value))}
                             min="0"
                             max="10"
                           />
@@ -399,8 +400,8 @@ export default function 代币浏览器与快速交易页面() {
                             <Input
                               id="stopEarnPercent"
                               type="number"
-                              value={止盈百分比}
-                              onChange={(e) => 设置止盈百分比(Number(e.target.value))}
+                              value={stopEarnPercent}
+                              onChange={(e) => setStopEarnPercent(Number(e.target.value))}
                               step="0.01"
                             />
                           </div>
@@ -409,8 +410,8 @@ export default function 代币浏览器与快速交易页面() {
                             <Input
                               id="stopLossPercent"
                               type="number"
-                              value={止损百分比}
-                              onChange={(e) => 设置止损百分比(Number(e.target.value))}
+                              value={stopLossPercent}
+                              onChange={(e) => setStopLossPercent(Number(e.target.value))}
                               step="0.01"
                             />
                           </div>
@@ -420,12 +421,12 @@ export default function 代币浏览器与快速交易页面() {
                           <Label htmlFor="stopEarnGroup">止盈组</Label>
                           <Textarea
                             id="stopEarnGroup"
-                            value={JSON.stringify(止盈组, null, 2)}
+                            value={JSON.stringify(stopEarnGroup, null, 2)}
                             onChange={(e) => {
                               try {
-                                设置止盈组(JSON.parse(e.target.value))
-                              } catch (error) {
-                                console.error('止盈组JSON格式无效')
+                                setStopEarnGroup(JSON.parse(e.target.value))
+                              } catch (err) {
+                                console.error('止盈组JSON格式无效', err)
                               }
                             }}
                             placeholder='[{"pricePercent": 0.2, "amountPercent": 0.5}, {"pricePercent": 0.8, "amountPercent": 1}]'
@@ -437,12 +438,12 @@ export default function 代币浏览器与快速交易页面() {
                           <Label htmlFor="stopLossGroup">止损组</Label>
                           <Textarea
                             id="stopLossGroup"
-                            value={JSON.stringify(止损组, null, 2)}
+                            value={JSON.stringify(stopLossGroup, null, 2)}
                             onChange={(e) => {
                               try {
-                                设置止损组(JSON.parse(e.target.value))
-                              } catch (error) {
-                                console.error('止损组JSON格式无效')
+                                setStopLossGroup(JSON.parse(e.target.value))
+                              } catch (err) {
+                                console.error('止损组JSON格式无效', err)
                               }
                             }}
                             placeholder='[{"pricePercent": 0.2, "amountPercent": 0.5}, {"pricePercent": 0.8, "amountPercent": 1}]'
@@ -458,22 +459,22 @@ export default function 代币浏览器与快速交易页面() {
                           <CardTitle className="text-sm font-medium">自定义盈亏配置</CardTitle>
                           <Switch
                             id="pnlCustomConfigEnabled"
-                            checked={启用自定义盈亏配置}
-                            onCheckedChange={设置启用自定义盈亏配置}
+                            checked={pnlCustomConfigEnabled}
+                            onCheckedChange={setPnlCustomConfigEnabled}
                           />
                         </div>
                       </CardHeader>
-                      {启用自定义盈亏配置 && (
+                      {pnlCustomConfigEnabled && (
                         <CardContent>
                           <div className="space-y-2">
                             <Textarea
                               id="pnlCustomConfig"
-                              value={JSON.stringify(自定义盈亏配置, null, 2)}
+                              value={JSON.stringify(pnlCustomConfig, null, 2)}
                               onChange={(e) => {
                                 try {
-                                  设置自定义盈亏配置(JSON.parse(e.target.value))
-                                } catch (error) {
-                                  console.error('自定义盈亏配置JSON格式无效')
+                                  setPnlCustomConfig(JSON.parse(e.target.value))
+                                } catch (err) {
+                                  console.error('自定义盈亏配置JSON格式无效', err)
                                 }
                               }}
                               placeholder='{"priorityFee": "", "jitoEnabled": true, "jitoTip": 0.001, "maxSlippage": 0.1, "concurrentNodes": 2, "retries": 1}'
@@ -486,13 +487,13 @@ export default function 代币浏览器与快速交易页面() {
 
                     <div className="flex gap-4">
                       <Button
-                        onClick={() => 处理快速交易提交('买入')}
+                        onClick={() => handleQuickTradeSubmit('buy')}
                         className="flex-1 bg-green-600 hover:bg-green-700"
                       >
                         买入
                       </Button>
                       <Button
-                        onClick={() => 处理快速交易提交('卖出')}
+                        onClick={() => handleQuickTradeSubmit('sell')}
                         className="flex-1 bg-red-600 hover:bg-red-700"
                       >
                         卖出
