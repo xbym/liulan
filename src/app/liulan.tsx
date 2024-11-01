@@ -199,7 +199,7 @@ export default function TokenBrowserAndQuickTrade() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
       <div className="fixed right-4 top-4 z-50 flex flex-col items-end">
         <div className="text-sm text-gray-600 mb-4 p-4 bg-blue-50 rounded-lg max-w-xs">
-          请先使用<a href="https://www.dbotx.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">该链接</a>注册dbot账户，然后打开API界面复制APIKey后回到本网站输入即可导入。
+          请先使用<a href="https://dbotx.com/?ref=81930897" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">该链接</a>注册dbot账户，然后打开API界面复制APIKey后回到本网站输入即可导入。
         </div>
         <Button
           className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium"
