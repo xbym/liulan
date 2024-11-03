@@ -233,15 +233,28 @@ export default function TokenBrowserAndQuickTrade() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
       <div className="fixed right-4 top-4 z-50 flex flex-col items-end">
-        <div className="text-sm text-gray-600 mb-4 p-4 bg-blue-50 rounded-lg max-w-xs">
-          请先使用<a href="https://dbotx.com/?ref=81930897" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">该链接</a>注册dbot账户，然后打开API界面复制APIKey后回到本网站输入即可导入。
-        </div>
         <Button
-          className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium"
+          className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium mb-4"
           onClick={() => setIsModalOpen(true)}
         >
           导入钱包
         </Button>
+        <div className="text-sm text-gray-600 mb-4 p-4 bg-blue-50 rounded-lg max-w-xs">
+          请先使用<a href="https://dbotx.com/?ref=81930897" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">该链接</a>注册dbot账户，然后打开API界面复制APIKey后回到本网站输入即可导入。
+        </div>
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg max-w-xs">
+          <p className="text-sm text-gray-600 mb-2">加入交流群获取更多帮助：</p>
+          <img 
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-tuzlHInAduxgUoJnHuCAnH9v59jmP5.png" 
+            alt="JBOT机器人群二维码" 
+            className="w-full rounded-lg mb-2"
+          />
+          <p className="text-xs text-gray-500 text-center">扫码加入JBOT机器人群</p>
+        </div>
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg max-w-xs">
+          <p className="text-sm text-gray-600 mb-2">请作者喝杯咖啡：</p>
+          <p className="text-xs font-mono bg-white p-2 rounded break-all">2YJ1MByeyYvE2tB76Sduomqcc9RVx7Z29hYwAfYxsemA</p>
+        </div>
       </div>
 
       <WalletImportModal
