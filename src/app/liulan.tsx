@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import WalletImportModal from './wallet-import-modal'
+import TokenHoldings from './token-holdings'
 
 interface StopGroup {
   pricePercent: number;
@@ -38,31 +39,30 @@ interface WalletResponse {
 }
 
 export default function TokenBrowserAndQuickTrade() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
-  const [apiKey, setApiKey] = useState<string>('')
-  const [wallets, setWallets] = useState<Wallet[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [apiKey, setApiKey] = useState<string>('');
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [selectedWalletAddress, setSelectedWalletAddress] = useState<string>('');
 
-  const [tradingPair, setTradingPair] = useState<string>('')
-  const [walletId, setWalletId] = useState<string>('')
-  const [priorityFee, setPriorityFee] = useState<string>('')
-  const [jitoEnabled, setJitoEnabled] = useState<boolean>(true)
-  const [jitoTip, setJitoTip] = useState<number>(0.001)
-  const [maxSlippage, setMaxSlippage] = useState<number>(0.1)
-  const [concurrentNodes, setConcurrentNodes] = useState<number>(2)
-  const [retries, setRetries] = useState<number>(1)
-  const [amountOrPercent, setAmountOrPercent] = useState<number>(0.1)
-  const [stopEarnPercent, setStopEarnPercent] = useState<number>(0.5)
-  const [stopLossPercent, setStopLossPercent] = useState<number>(0.5)
+  const [tradingPair, setTradingPair] = useState<string>('');
+  const [walletId, setWalletId] = useState<string>('');
+  const [priorityFee, setPriorityFee] = useState<string>('');
+  const [jitoEnabled, setJitoEnabled] = useState<boolean>(true);
+  const [jitoTip, setJitoTip] = useState<number>(0.001);
+  const [maxSlippage, setMaxSlippage] = useState<number>(0.1);
+  const [concurrentNodes, setConcurrentNodes] = useState<number>(2);
+  const [retries, setRetries] = useState<number>(1);
+  const [amountOrPercent, setAmountOrPercent] = useState<number>(0.1);
+  const [stopEarnPercent, setStopEarnPercent] = useState<number>(0.5);
+  const [stopLossPercent, setStopLossPercent] = useState<number>(0.5);
   const [stopEarnGroup, setStopEarnGroup] = useState<StopGroup[]>([
-    { pricePercent: 0.2, amountPercent: 0.5 },
-    { pricePercent: 0.8, amountPercent: 1 }
-  ])
+    { pricePercent: 0.5, amountPercent: 1 }
+  ]);
   const [stopLossGroup, setStopLossGroup] = useState<StopGroup[]>([
-    { pricePercent: 0.2, amountPercent: 0.5 },
-    { pricePercent: 0.8, amountPercent: 1 }
-  ])
-  const [pnlCustomConfigEnabled, setPnlCustomConfigEnabled] = useState<boolean>(true)
+    { pricePercent: 0.5, amountPercent: 1 }
+  ]);
+  const [pnlCustomConfigEnabled, setPnlCustomConfigEnabled] = useState<boolean>(true);
   const [pnlCustomConfig, setPnlCustomConfig] = useState<CustomPnlConfig>({
     priorityFee: '',
     jitoEnabled: true,
@@ -70,9 +70,18 @@ export default function TokenBrowserAndQuickTrade() {
     maxSlippage: 0.1,
     concurrentNodes: 2,
     retries: 1
-  })
+  });
 
-  const baseUrl = 'https://www.gmgn.cc/kline/sol/'
+  const [chartUrl, setChartUrl] = useState('');
+  const baseUrl = 'https://www.gmgn.cc/kline/sol/';
+
+  useEffect(() => {
+    setStopEarnGroup([{ pricePercent: stopEarnPercent, amountPercent: 1 }]);
+  }, [stopEarnPercent]);
+
+  useEffect(() => {
+    setStopLossGroup([{ pricePercent: stopLossPercent, amountPercent: 1 }]);
+  }, [stopLossPercent]);
 
   const fetchWallets = useCallback(async () => {
     if (!apiKey) return;
@@ -144,6 +153,11 @@ export default function TokenBrowserAndQuickTrade() {
     }
   };
 
+  const handleWalletSelect = (wallet: Wallet) => {
+    setWalletId(wallet.id);
+    setSelectedWalletAddress(wallet.address);
+  };
+
   const handleQuickTradeSubmit = async (type: 'buy' | 'sell') => {
     if (!tradingPair || !walletId || !apiKey) {
       alert('请填写所有必要字段并确保已导入钱包');
@@ -168,7 +182,7 @@ export default function TokenBrowserAndQuickTrade() {
       stopLossGroup: stopLossGroup,
       pnlCustomConfigEnabled: pnlCustomConfigEnabled,
       pnlCustomConfig: pnlCustomConfig
-    }
+    };
 
     try {
       const response = await fetch('https://api-bot-v1.dbotx.com/automation/swap_order', {
@@ -178,22 +192,20 @@ export default function TokenBrowserAndQuickTrade() {
           'X-API-KEY': apiKey
         },
         body: JSON.stringify(requestData)
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('创建交易订单失败')
+        throw new Error('创建交易订单失败');
       }
 
-      const data = await response.json()
-      console.log('交易订单已创建:', data)
-      alert('交易订单创建成功！')
+      const data = await response.json();
+      console.log('交易订单已创建:', data);
+      alert('交易订单创建成功！');
     } catch (error) {
-      console.error('创建交易订单时出错:', error)
-      alert('创建交易订单失败。请重试。')
+      console.error('创建交易订单时出错:', error);
+      alert('创建交易订单失败。请重试。');
     }
-  }
-
-  const [chartUrl, setChartUrl] = useState('');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
@@ -222,7 +234,7 @@ export default function TokenBrowserAndQuickTrade() {
         </h1>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Left Column - Chart */}
+          {/* Left Column - Chart and Holdings */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -256,6 +268,10 @@ export default function TokenBrowserAndQuickTrade() {
                 </div>
               </CardContent>
             </Card>
+
+            {selectedWalletAddress && (
+              <TokenHoldings walletAddress={selectedWalletAddress} />
+            )}
           </div>
 
           {/* Right Column - Trading Controls */}
@@ -280,10 +296,7 @@ export default function TokenBrowserAndQuickTrade() {
                                     ? 'bg-primary text-primary-foreground font-bold'
                                     : 'bg-background hover:bg-accent hover:text-accent-foreground'
                                 }`}
-                                onClick={() => {
-                                  console.log('Wallet clicked:', wallet.id);
-                                  setWalletId(wallet.id);
-                                }}
+                                onClick={() => handleWalletSelect(wallet)}
                               >
                                 <div className="font-medium">{wallet.address}</div>
                                 {walletId === wallet.id && (
@@ -322,7 +335,7 @@ export default function TokenBrowserAndQuickTrade() {
                       </div>
                     </div>
 
-                    <Card className="border border-dashed">
+                    <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium">防夹设置</CardTitle>
                       </CardHeader>
@@ -348,7 +361,7 @@ export default function TokenBrowserAndQuickTrade() {
                       </CardContent>
                     </Card>
 
-                    <Card className="border border-dashed">
+                    <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium">交易设置</CardTitle>
                       </CardHeader>
@@ -358,9 +371,8 @@ export default function TokenBrowserAndQuickTrade() {
                           <Input
                             id="maxSlippage"
                             type="number"
-                            
                             value={maxSlippage}
-                            onChange={(e) => setMaxSlippage(Number(e.target.value))}
+                            onChange={(e)=> setMaxSlippage(Number(e.target.value))}
                             step="0.01"
                           />
                         </div>
@@ -389,7 +401,7 @@ export default function TokenBrowserAndQuickTrade() {
                       </CardContent>
                     </Card>
 
-                    <Card className="border border-dashed">
+                    <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium">止盈止损设置</CardTitle>
                       </CardHeader>
@@ -401,7 +413,10 @@ export default function TokenBrowserAndQuickTrade() {
                               id="stopEarnPercent"
                               type="number"
                               value={stopEarnPercent}
-                              onChange={(e) => setStopEarnPercent(Number(e.target.value))}
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                setStopEarnPercent(value);
+                              }}
                               step="0.01"
                             />
                           </div>
@@ -411,49 +426,38 @@ export default function TokenBrowserAndQuickTrade() {
                               id="stopLossPercent"
                               type="number"
                               value={stopLossPercent}
-                              onChange={(e) => setStopLossPercent(Number(e.target.value))}
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                setStopLossPercent(value);
+                              }}
                               step="0.01"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="stopEarnGroup">止盈组</Label>
+                          <Label htmlFor="stopEarnGroup">止盈组（自动同步）</Label>
                           <Textarea
                             id="stopEarnGroup"
                             value={JSON.stringify(stopEarnGroup, null, 2)}
-                            onChange={(e) => {
-                              try {
-                                setStopEarnGroup(JSON.parse(e.target.value))
-                              } catch (err) {
-                                console.error('止盈组JSON格式无效', err)
-                              }
-                            }}
-                            placeholder='[{"pricePercent": 0.2, "amountPercent": 0.5}, {"pricePercent": 0.8, "amountPercent": 1}]'
-                            className="h-24"
+                            readOnly
+                            className="h-24 bg-gray-50"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="stopLossGroup">止损组</Label>
+                          <Label htmlFor="stopLossGroup">止损组（自动同步）</Label>
                           <Textarea
                             id="stopLossGroup"
                             value={JSON.stringify(stopLossGroup, null, 2)}
-                            onChange={(e) => {
-                              try {
-                                setStopLossGroup(JSON.parse(e.target.value))
-                              } catch (err) {
-                                console.error('止损组JSON格式无效', err)
-                              }
-                            }}
-                            placeholder='[{"pricePercent": 0.2, "amountPercent": 0.5}, {"pricePercent": 0.8, "amountPercent": 1}]'
-                            className="h-24"
+                            readOnly
+                            className="h-24 bg-gray-50"
                           />
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="border border-dashed">
+                    <Card>
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-medium">自定义盈亏配置</CardTitle>
@@ -507,5 +511,5 @@ export default function TokenBrowserAndQuickTrade() {
         </div>
       </div>
     </div>
-  )
+  );
 }
