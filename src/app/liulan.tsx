@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import WalletImportModal from './wallet-import-modal'
 import TokenHoldings from './token-holdings'
+import SolBalance from './sol-balance'
 
 interface StopGroup {
   pricePercent: number;
@@ -75,6 +76,7 @@ export default function TokenBrowserAndQuickTrade() {
   const [chartUrl, setChartUrl] = useState('');
   const baseUrl = 'https://www.gmgn.cc/kline/sol/';
 
+  // 自动同步止盈止损设置
   useEffect(() => {
     setStopEarnGroup([{ pricePercent: stopEarnPercent, amountPercent: 1 }]);
   }, [stopEarnPercent]);
@@ -115,7 +117,6 @@ export default function TokenBrowserAndQuickTrade() {
       fetchWallets();
     }
   }, [apiKey, fetchWallets]);
-
   const handleImport = async (importApiKey: string, privateKeys: string, onlyImportApiKey: boolean) => {
     setIsImporting(true);
     try {
@@ -154,6 +155,7 @@ export default function TokenBrowserAndQuickTrade() {
   };
 
   const handleWalletSelect = (wallet: Wallet) => {
+    console.log('Wallet selected:', wallet);
     setWalletId(wallet.id);
     setSelectedWalletAddress(wallet.address);
   };
@@ -270,10 +272,12 @@ export default function TokenBrowserAndQuickTrade() {
             </Card>
 
             {selectedWalletAddress && (
-              <TokenHoldings walletAddress={selectedWalletAddress} />
+              <div className="space-y-6">
+                <SolBalance walletAddress={selectedWalletAddress} />
+                <TokenHoldings walletAddress={selectedWalletAddress} />
+              </div>
             )}
           </div>
-
           {/* Right Column - Trading Controls */}
           <div>
             <Card>
@@ -372,7 +376,7 @@ export default function TokenBrowserAndQuickTrade() {
                             id="maxSlippage"
                             type="number"
                             value={maxSlippage}
-                            onChange={(e)=> setMaxSlippage(Number(e.target.value))}
+                            onChange={(e) => setMaxSlippage(Number(e.target.value))}
                             step="0.01"
                           />
                         </div>
@@ -455,9 +459,7 @@ export default function TokenBrowserAndQuickTrade() {
                           />
                         </div>
                       </CardContent>
-                    </Card>
-
-                    <Card>
+                    </Card><Card>
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-medium">自定义盈亏配置</CardTitle>
@@ -476,9 +478,9 @@ export default function TokenBrowserAndQuickTrade() {
                               value={JSON.stringify(pnlCustomConfig, null, 2)}
                               onChange={(e) => {
                                 try {
-                                  setPnlCustomConfig(JSON.parse(e.target.value))
+                                  setPnlCustomConfig(JSON.parse(e.target.value));
                                 } catch (err) {
-                                  console.error('自定义盈亏配置JSON格式无效', err)
+                                  console.error('自定义盈亏配置JSON格式无效', err);
                                 }
                               }}
                               placeholder='{"priorityFee": "", "jitoEnabled": true, "jitoTip": 0.001, "maxSlippage": 0.1, "concurrentNodes": 2, "retries": 1}'
