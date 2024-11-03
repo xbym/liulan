@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import WalletImportModal from './wallet-import-modal'
 import TokenHoldings from './token-holdings'
-import SolBalance from './sol-balance'
+// import SolBalance from './sol-balance' // Deleted as per update 1
 
 interface StopGroup {
   pricePercent: number;
@@ -39,12 +39,24 @@ interface WalletResponse {
   docs: string;
 }
 
+const BACKEND_URL = 'https://xbym-12f71894013e.herokuapp.com';
+
+const fetchSolBalance = async (publicKey: string): Promise<number> => {
+  const response = await fetch(`${BACKEND_URL}/api/sol-balance/${publicKey}`);
+  if (!response.ok) {
+    throw new Error('获取SOL余额失败');
+  }
+  const data = await response.json();
+  return data.balance;
+};
+
 export default function TokenBrowserAndQuickTrade() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [apiKey, setApiKey] = useState<string>('');
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string>('');
+  const [solBalance, setSolBalance] = useState<number | null>(null);
 
   const [tradingPair, setTradingPair] = useState<string>('');
   const [walletId, setWalletId] = useState<string>('');
@@ -117,6 +129,7 @@ export default function TokenBrowserAndQuickTrade() {
       fetchWallets();
     }
   }, [apiKey, fetchWallets]);
+
   const handleImport = async (importApiKey: string, privateKeys: string, onlyImportApiKey: boolean) => {
     setIsImporting(true);
     try {
@@ -154,10 +167,18 @@ export default function TokenBrowserAndQuickTrade() {
     }
   };
 
-  const handleWalletSelect = (wallet: Wallet) => {
+  const handleWalletSelect = async (wallet: Wallet) => {
     console.log('Wallet selected:', wallet);
     setWalletId(wallet.id);
     setSelectedWalletAddress(wallet.address);
+    
+    try {
+      const balance = await fetchSolBalance(wallet.address);
+      setSolBalance(balance);
+    } catch (error) {
+      console.error('获取SOL余额时出错:', error);
+      setSolBalance(null);
+    }
   };
 
   const handleQuickTradeSubmit = async (type: 'buy' | 'sell') => {
@@ -273,7 +294,18 @@ export default function TokenBrowserAndQuickTrade() {
 
             {selectedWalletAddress && (
               <div className="space-y-6">
-                <SolBalance walletAddress={selectedWalletAddress} />
+                <Card>
+                  <CardHeader>
+                    <CardTitle>SOL 余额</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {solBalance !== null ? (
+                      <p className="text-2xl font-bold">{solBalance} SOL</p>
+                    ) : (
+                      <p>加载中...</p>
+                    )}
+                  </CardContent>
+                </Card>
                 <TokenHoldings walletAddress={selectedWalletAddress} />
               </div>
             )}
@@ -323,6 +355,7 @@ export default function TokenBrowserAndQuickTrade() {
                             id="amountOrPercent"
                             type="number"
                             value={amountOrPercent}
+                            
                             onChange={(e) => setAmountOrPercent(Number(e.target.value))}
                             step="0.01"
                           />
@@ -459,7 +492,9 @@ export default function TokenBrowserAndQuickTrade() {
                           />
                         </div>
                       </CardContent>
-                    </Card><Card>
+                    </Card>
+
+                    <Card>
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-medium">自定义盈亏配置</CardTitle>
